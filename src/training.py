@@ -10,6 +10,9 @@ def train(model, train_loader, criterion, optimizer, epoch, logger, step):
         train_loader (DataLoader): DataLoader for the training set.
         criterion: criterion for loss
         optimizer (torch.optim.Optimizer): Optimizer for training.
+        epoch (int): Epoch number.
+        logger (function): logger function for loss and accuracy statistics
+        step (int): every this number of samples loss and accuracy is being calculated
     """
     model.train()
     running_loss = 0.0
@@ -61,7 +64,7 @@ def validate(model, val_loader):
             pred = output.argmax(dim=1)
             preds.extend(pred.cpu().numpy())
             targets.extend(target.cpu().numpy())
+    recall = recall_score(targets, preds, zero_division=0)
+    precision = precision_score(targets, preds, zero_division=0)
     f1 = f1_score(targets, preds, average='macro')
-    recall = recall_score(targets, preds)
-    precision = precision_score(targets, preds)
     return recall, precision, f1

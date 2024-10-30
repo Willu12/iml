@@ -3,7 +3,7 @@ import numpy as np
 import librosa
 from sklearn.model_selection import train_test_split
 
-def load_audio(file_path, sample_rate=24000):
+def load_audio(file_path, sr=16000):
     """
     Loads an audio file.
 
@@ -15,7 +15,7 @@ def load_audio(file_path, sample_rate=24000):
         np.ndarray: Loaded audio signal.
         int: Sampling rate.
     """
-    audio, sr = librosa.load(file_path, sr=sample_rate)
+    audio, sr = librosa.load(file_path, sr=sr)
     return audio, sr
 
 def create_spectrogram(audio, sr, n_fft=1024, hop_length=512):
@@ -25,7 +25,8 @@ def create_spectrogram(audio, sr, n_fft=1024, hop_length=512):
     Parameters:
         audio_clip (np.ndarray): Audio clip data.
         sr (int): Sampling rate of the audio clip.
-        n_mels (int): Number of mel bands to generate.
+        n_fft : int > 0 [scalar] length of the FFT window
+        hop_length : int > 0 [scalar] number of samples between successive frames.
 
     Returns:
         np.ndarray: Log-mel spectrogram of the audio clip.
@@ -34,7 +35,7 @@ def create_spectrogram(audio, sr, n_fft=1024, hop_length=512):
     log_spectrogram = librosa.power_to_db(spectrogram, ref=np.max)
     return log_spectrogram
 
-def split_into_clips(audio, clip_duration=3, sample_rate=24000):
+def split_into_clips(audio, clip_duration=3, sample_rate=16000):
     """
     Splits audio into fixed-duration clips.
 
@@ -55,8 +56,6 @@ def prepare_datasets(data_dir):
 
     Parameters:
         data_dir (str): Directory containing .wav files.
-        test_size (float): Proportion of data to use as the test set.
-        val_size (float): Proportion of data to use as the validation set.
 
     Returns:
         Tuple[List[str], List[str], List[str]]: Paths for train, validation, and test sets.

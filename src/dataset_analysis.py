@@ -21,9 +21,25 @@ def plot_spectrogram(spectrogram, title="Spectrogram"):
     plt.ylabel("Frequency")
     plt.show()
 
-def dataset_summary(file_list):
+def dataset_durations(file_list):
     """
-    Prints a summary of dataset statistics, such as total file count.
+    Returns list of track durations from .wav file list.
+
+    Parameters:
+        file_list (List[str]): List of .wav file paths.
+
+    Returns:
+        List[float64]: List of track durations
+    """
+    durations = []
+    for file in file_list:
+        audio, sr = load_audio(file)
+        durations.append(len(audio) / sr)
+    return durations
+
+def print_duration_summary(durations):
+    """
+    Prints a summary of sample duration statistics, such as total count, mean and range.
 
     Parameters:
         file_list (List[str]): List of file paths in the dataset.
@@ -31,10 +47,8 @@ def dataset_summary(file_list):
     Returns:
         None
     """
-    print(f"Total files: {len(file_list)}")
-    durations = []
-    for file in file_list:
-        audio, sr = load_audio(file)
-        durations.append(len(audio) / sr)
+    print(f"Total files: {len(durations)}")
+    print(f"Total duration: {sum(durations):.2f} sec")
     print(f"Average duration: {np.mean(durations):.2f} sec")
     print(f"Duration range: {min(durations):.2f} - {max(durations):.2f} sec")
+
