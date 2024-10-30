@@ -1,6 +1,19 @@
 # iml
 
-This project aims to build a Convolutional Neural Network (CNN) model for speech recognition using spectrograms generated from audio files. The model is trained to classify audio clips based on their spectrogram representations. The project is built with PyTorch and integrates Weights & Biases (W&B) for experiment tracking and performance logging.
+The goal of the project is to prepare a machine learning module that can be hypothetically
+used in an automated, voice-based intercom device. Imagine that you are working in
+a team of several programmers and the access to your floor is restricted with doors. There
+is an intercom that can be used to open the door. You are implementing a machine
+learning module that will recognize if a given person has the permission to open the door
+or not. To simplify this problem, we interpret this as a binary recognition problem. Class
+1 is made of allowed persons. Class 0 is made of not allowed persons. The medium used
+to distinguish between the two classes is voice. Thus, the project to be delivered in in fact
+a voice recognition project. To shift the focus to convolutional neural networks, we
+assume that the voice recording must be turned into spectrograms in the pre-processing
+stage. Thus, the project to be delivered is in fact a voice recognition project but
+implementing it will require techniques that can also be applied to diMerent kinds of
+image processing.
+~ from Introduction to Machine Learning WUT course project description.
 
 ## Project Structure
 
@@ -14,10 +27,9 @@ iml/
 │   ├── model_training.ipynb                  # Model training and logging notebook
 ├── src/                             # Main source files
 │   ├── __init__.py
-│   ├── config.py                    # Configuration settings
 │   ├── data_processing.py           # Spectrogram generation, augmentation, dataset split
 │   ├── dataset_analysis.py          # Dataset exploration and visualization functions
-│   ├── model.py                     # CNN model definition
+│   ├── model.py                     # CNN models definitions
 │   └── training.py                  # Training and validation functions
 ├── models/                          # Saved model directory
 ├── requirements.txt                 # Python dependencies
@@ -33,14 +45,16 @@ iml/
   source env/bin/activate
   pip install -r requirements.txt
   ```
+  or VSCode can execute this command automagically by using "Python: Create Enviroment..." action.
+  To use jupyter notebooks (recommended way), `jupyter` package must be installed.
 
 ## Data Preparation
 
-1. **Download the Dataset**: Download the dataset from [Zenodo](https://zenodo.org/records/4660670) and place all `.wav` files in the `data/` directory.
+1. **Download the Dataset**: Download the dataset from [Zenodo](https://zenodo.org/records/4660670) and place chosen `.wav` files (I was using "clean" directory). Be aware of strange files starting with `.`, which are not proper `.wav` and needs to be removed.
 2. **Process the Data**: Use the `data_preparation_and_analysis.ipynb` notebook to:
    - Load audio files
    - Split them into train, validation, and test sets
-   - Divide each recording into 2-second clips
+   - Divide each recording into 3-second clips
    - Generate spectrograms and save them to `datasets/` subdirectories
    - Generate dataset statistics and visualize sample spectrograms
 
@@ -57,39 +71,15 @@ iml/
 
 ### Spectrogram Generation
 
-Spectrogram generation is handled by the `data_processing.py` script. Key functions include:
+Spectrogram generation is handled by the `data_processing.py` functions:
 - `load_audio()`: Loads audio from a .wav file.
-- `split_into_clips()`: Splits an audio file into 2-second clips.
+- `split_into_clips()`: Splits an audio file into 3-second clips.
 - `create_spectrogram()`: Converts audio clips into log-mel spectrograms.
 
 ### Model Definition
 
-The `SimpleCNN` model in `model.py` is a straightforward CNN classifier targeting an F1 score > 0.6. Customize the architecture in `model.py` to improve model performance as needed.
-
-### Logging with Weights & Biases
-
-Experiment metrics are logged to W&B:
-- **Training Loss** and **Validation F1 Score** for each epoch.
-- **Model Checkpoints** saved for tracking different training runs.
-
-## Example Commands
-
-```bash
-# Activate the environment
-source env/bin/activate
-
-# Run Jupyter Notebook server
-jupyter notebook
-```
-
-## Notes
-
-- All modules in the `src/` directory are designed to be imported with a single alias, such as `import src as iml`.
-- The project structure and code are optimized to allow easy loading and use in Jupyter notebooks for exploratory analysis.
-
-## License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+The `SimpleCNN` is simple CNN for 128x128 image size.
+The `TutorialCNN` is the CNN from provided [tutorial](https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html).
 
 ## Acknowledgments
 

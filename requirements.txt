@@ -3,9 +3,8 @@ torchaudio
 torchvision
 numpy
 scikit-learn
-pandas
 matplotlib
-seaborn
-librosa               # for audio processing
-wandb                 # for logging
+librosa
+wandb
 tqdm
+Pillow
