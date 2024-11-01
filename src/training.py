@@ -1,5 +1,5 @@
 import torch
-from sklearn.metrics import f1_score, recall_score, precision_score
+from sklearn.metrics import multilabel_confusion_matrix
 
 
 def train(model, train_loader, criterion, optimizer, epoch, logger, step):
@@ -38,7 +38,50 @@ def train(model, train_loader, criterion, optimizer, epoch, logger, step):
             correct = 0
 
 
-def validate(model, val_loader):
+class metrics:
+    def __init__(self, confusion_matrix):
+        true_neg = confusion_matrix[0, 0, 0]
+        false_neg = confusion_matrix[0, 1, 0]
+        true_pos = confusion_matrix[0, 1, 1]
+        false_pos = confusion_matrix[0, 0, 1]
+
+        real_pos = true_pos + false_neg
+        real_neg = true_neg + false_pos
+        model_pos = true_pos + false_pos
+
+        if real_pos != 0:
+            self.false_rejection = false_neg / real_pos
+            self.recall = true_pos / real_pos
+        else:
+            self.false_rejection = self.recall = 0
+
+        if real_neg != 0:
+            self.false_acceptance = false_pos / real_neg
+        else:
+            self.false_acceptance = 0
+
+        if model_pos != 0:
+            self.precision = true_pos / model_pos
+        else:
+            self.precision = 0
+
+        if model_pos + real_pos != 0:
+            # https://en.wikipedia.org/wiki/F-score#Definition
+            self.f1 = (2 * true_pos) / (model_pos + real_pos)
+        else:
+            self.f1 = 0
+        # TODO: Maybe not 0?
+
+    def __str__(self):
+        return rf"""Metrics:
+    F1: {self.f1:.2f},
+    Recall: {self.recall:.2f},
+    Precision: {self.precision:.2f},
+    False acceptance: {self.false_acceptance:.2f},
+    False rejection: {self.false_rejection:.2f}"""
+
+
+def validate(model, val_loader: torch.utils.data.DataLoader):
     """
     Validates the model and calculates F1 score.
 
@@ -55,12 +98,9 @@ def validate(model, val_loader):
     preds, targets = [], []
     with torch.no_grad():
         for data, target in val_loader:
-            data, target = data.to(model.device), target.to(model.device)
+            data = data.to(model.device)
             output = model(data)
             pred = output.argmax(dim=1)
             preds.extend(pred.cpu().numpy())
-            targets.extend(target.cpu().numpy())
-    recall = recall_score(targets, preds, zero_division=0)
-    precision = precision_score(targets, preds, zero_division=0)
-    f1 = f1_score(targets, preds, average="macro")
-    return recall, precision, f1
+            targets.extend(target.numpy())
+    return metrics(multilabel_confusion_matrix(targets, preds))
