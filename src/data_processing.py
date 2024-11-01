@@ -4,6 +4,24 @@ import librosa
 from sklearn.model_selection import train_test_split
 
 
+def list_audio_files(data_dir):
+    """
+    Lists all supported files in a directory.
+    For now these are '.wav' files, which do not begin with a '._'
+
+    Parameters:
+        data_dir (str): Directory containing .wav files.
+
+    Returns:
+        list[str]: List of audio files.
+    """
+    return [
+        os.path.join(data_dir, f)
+        for f in os.listdir(data_dir)
+        if f.endswith(".wav") and not f.startswith("._")
+    ]
+
+
 def load_audio(file_path, sr=16000):
     """
     Loads an audio file.
@@ -60,7 +78,7 @@ def split_into_clips(audio, clip_duration=3, sample_rate=16000):
     ]
 
 
-def prepare_datasets(data_dir, ignore_broken=True):
+def prepare_datasets(data_dir):
     """
     Splits audio files into training, validation, and test sets.
 
@@ -71,9 +89,7 @@ def prepare_datasets(data_dir, ignore_broken=True):
     Returns:
         Tuple[List[str], List[str], List[str]]: Paths for train, validation, and test sets.
     """
-    files = [
-        os.path.join(data_dir, f) for f in os.listdir(data_dir) if f.endswith(".wav")
-    ]
+    files = list_audio_files(data_dir)
     train_files, test_files = train_test_split(files, test_size=0.2, random_state=42)
     train_files, val_files = train_test_split(
         train_files, test_size=0.2, random_state=42
