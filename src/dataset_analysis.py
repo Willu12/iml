@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from .data_processing import load_audio
 
+
 def plot_spectrogram(spectrogram, title="Spectrogram"):
     """
     Plots a single spectrogram.
@@ -14,12 +15,13 @@ def plot_spectrogram(spectrogram, title="Spectrogram"):
         None
     """
     plt.figure(figsize=(10, 4))
-    plt.imshow(spectrogram, aspect='auto', cmap='gray_r')
+    plt.imshow(spectrogram, aspect="auto", cmap="gray_r")
     plt.title(title)
-    plt.colorbar(format='%+2.0f dB')
+    plt.colorbar(format="%+2.0f dB")
     plt.xlabel("Time")
     plt.ylabel("Frequency")
     plt.show()
+
 
 def dataset_durations(file_list):
     """
@@ -37,6 +39,7 @@ def dataset_durations(file_list):
         durations.append(len(audio) / sr)
     return durations
 
+
 def print_duration_summary(durations):
     """
     Prints a summary of sample duration statistics, such as total count, mean and range.
@@ -51,4 +54,3 @@ def print_duration_summary(durations):
     print(f"Total duration: {sum(durations):.2f} sec")
     print(f"Average duration: {np.mean(durations):.2f} sec")
     print(f"Duration range: {min(durations):.2f} - {max(durations):.2f} sec")
-

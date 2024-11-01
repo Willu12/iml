@@ -1,6 +1,7 @@
 import torch
 from sklearn.metrics import f1_score, recall_score, precision_score
 
+
 def train(model, train_loader, criterion, optimizer, epoch, logger, step):
     """
     Trains the model for one epoch.
@@ -28,16 +29,11 @@ def train(model, train_loader, criterion, optimizer, epoch, logger, step):
         _, predictions = torch.max(output, 1)
         correct += (predictions == target).float().mean().item()
         running_loss += loss.item()
-        if i % step == step-1:
+        if i % step == step - 1:
             accuracy = correct / step
             loss = running_loss / step
             step = epoch * len(train_loader) + i
-            logger({
-                    "train/accuracy": accuracy,
-                    "train/loss": loss
-                },
-                step=step
-            )
+            logger({"train/accuracy": accuracy, "train/loss": loss}, step=step)
             running_loss = 0.0
             correct = 0
 
@@ -66,5 +62,5 @@ def validate(model, val_loader):
             targets.extend(target.cpu().numpy())
     recall = recall_score(targets, preds, zero_division=0)
     precision = precision_score(targets, preds, zero_division=0)
-    f1 = f1_score(targets, preds, average='macro')
+    f1 = f1_score(targets, preds, average="macro")
     return recall, precision, f1

@@ -2,16 +2,18 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
+
 class SimpleCNN(nn.Module):
     """
     A simple CNN model for audio classification using spectrograms.
-    
+
     Parameters:
         num_classes (int): Number of output classes.
 
     Returns:
         None
     """
+
     def __init__(self, num_classes=2):
         super(SimpleCNN, self).__init__()
         self.conv1 = nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1)
@@ -37,6 +39,7 @@ class SimpleCNN(nn.Module):
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
         return x
+
 
 class TutorialCNN(nn.Module):
     def __init__(self):
