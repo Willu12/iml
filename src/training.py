@@ -38,7 +38,7 @@ def train(model, train_loader, criterion, optimizer, epoch, logger, step):
             correct = 0
 
 
-class metrics:
+class ValidationMetrics:
     def __init__(self, confusion_matrix):
         true_neg = confusion_matrix[0, 0, 0]
         false_neg = confusion_matrix[0, 1, 0]
@@ -103,4 +103,4 @@ def validate(model, val_loader: torch.utils.data.DataLoader):
             pred = output.argmax(dim=1)
             preds.extend(pred.cpu().numpy())
             targets.extend(target.numpy())
-    return metrics(multilabel_confusion_matrix(targets, preds))
+    return ValidationMetrics(multilabel_confusion_matrix(targets, preds))
