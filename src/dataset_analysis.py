@@ -69,6 +69,10 @@ def print_duration_summary(durations):
     print(f"Average duration: {np.mean(durations):.2f} sec")
     print(f"Duration range: {min(durations):.2f} - {max(durations):.2f} sec")
 
+
+def clips_statistics(clips, sr):
+    return ClipsStatistics(clips, sr)
+
 def statistics(data_files):
     """
     Returns statsitics of given list of files, such as total coun, mean and range.
@@ -85,12 +89,40 @@ class DatasetStatistics:
     def __init__(self, data_files):
         self.data_files = data_files
         self.durations = dataset_durations(self.data_files)
+        self.get_stats_from_durations(self.durations);
+        self.audios = [load_audio(file) for file in data_files]
+        self.audio_signals = [audio[0] for audio in self.audios]
+
+    def get_stats_from_durations(self, durations):
+        self.durations = durations
         self.files_count = len(self.durations)
         self.total_duration = sum(self.durations)
         self.average_duration = np.mean(self.durations)
         self.duration_range = [min(self.durations),max(self.durations)]
-        self.audios = [load_audio(file) for file in data_files]
-        self.audio_signals = [audio[0] for audio in self.audios]
+
+    def __str__(self):
+        return rf"""Statstics:
+        Total files: {self.files_count},
+        Total duration: {self.total_duration:.2f} sec,
+        Average duration: {self.average_duration:.2f} sec, 
+        Duration range: {self.duration_range[0]:.2f} - {self.duration_range[0]:.2f} sec
+        """
+    
+class ClipsStatistics:
+    def __init__(self, clips, sr):
+        self.clips = clips;
+        self.sr = sr;
+        self.files_count = len(clips)
+        durations = [len(clip) / sr for clip in clips]
+        self.get_stats_from_durations(durations)          
+
+    def get_stats_from_durations(self, durations):
+        self.durations = durations
+        self.files_count = len(self.durations)
+        self.total_duration = sum(self.durations)
+        self.average_duration = np.mean(self.durations)
+        self.duration_range = [min(self.durations),max(self.durations)]
+        
     
     def __str__(self):
         return rf"""Statstics:
