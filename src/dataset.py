@@ -1,12 +1,26 @@
-import os
+"""
+Module for handling spectrogram datasets, including dataset loading and 
+DataLoader preparation for training, validation, and testing.
+"""
 
+import os
 from PIL import Image
 from torch.utils.data import DataLoader, Dataset
-
 from .config import VALID_ACCESS_LABELS, TRAIN_DIR, VAL_DIR, TEST_DIR
 
 
 class SpectrogramDataset(Dataset):
+    """
+    Dataset class for loading spectrogram images and assigning labels.
+
+    Parameters:
+        directory (str): Path to the directory containing spectrogram images.
+        transform (callable, optional): Transformation to apply to images.
+
+    Attributes:
+        files (list[str]): List of paths to spectrogram image files.
+        transform (callable): Transformations to apply to images.
+    """
     def __init__(self, directory, transform=None):
         self.files = [
             os.path.join(directory, f)
@@ -19,6 +33,15 @@ class SpectrogramDataset(Dataset):
         return len(self.files)
 
     def __getitem__(self, idx):
+        """
+        Retrieves an image and its label.
+
+        Parameters:
+            idx (int): Index of the image in the dataset.
+
+        Returns:
+            tuple: A tuple containing the transformed image and its label.
+        """
         img_path = self.files[idx]
         speaker_id = img_path.split("/")[-1].split("_")[0]
         label = int(speaker_id in VALID_ACCESS_LABELS)
@@ -32,14 +55,15 @@ class SpectrogramDataset(Dataset):
 
 def prepare_dataset_loaders(transform, batch_size):
     """
-    Creates data loaders for training, validation and testing datasets.
+    Creates data loaders for the training, validation, and test datasets.
 
     Parameters:
-        transform: Combination of transforms to perform on data
-        batch_size (int): Size of data batch to load
+        transform (callable): Transformations to apply to the data.
+        batch_size (int): Number of samples per batch to load.
 
     Returns:
-        Tuple[DataLoader, DataLoader, DataLoader]: Training, validation and testing data loaders
+        tuple[DataLoader, DataLoader, DataLoader]: Data loaders for training, 
+        validation, and testing datasets.
     """
     train_dataset = SpectrogramDataset(TRAIN_DIR, transform=transform)
     val_dataset = SpectrogramDataset(VAL_DIR, transform=transform)

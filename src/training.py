@@ -1,3 +1,9 @@
+"""
+Module for training and validation routines for a CNN model, including functions for
+training, validation, and calculating performance metrics such as F1 score, recall,
+and precision.
+"""
+
 import torch
 from sklearn.metrics import multilabel_confusion_matrix
 
@@ -9,11 +15,14 @@ def train(model, train_loader, criterion, optimizer, epoch, logger, step):
     Parameters:
         model (torch.nn.Module): The CNN model to train.
         train_loader (DataLoader): DataLoader for the training set.
-        criterion: criterion for loss
+        criterion (callable): Loss function.
         optimizer (torch.optim.Optimizer): Optimizer for training.
-        epoch (int): Epoch number.
-        logger (function): logger function for loss and accuracy statistics
-        step (int): every this number of samples loss and accuracy is being calculated
+        epoch (int): Current epoch number.
+        logger (callable): Logging function for recording loss and accuracy.
+        step (int): Interval at which to log loss and accuracy.
+
+    Returns:
+        None
     """
     model.train()
     running_loss = 0.0
@@ -32,13 +41,27 @@ def train(model, train_loader, criterion, optimizer, epoch, logger, step):
         if i % step == step - 1:
             accuracy = correct / step
             loss = running_loss / step
-            step = epoch * len(train_loader) + i
-            logger({"train/accuracy": accuracy, "train/loss": loss}, step=step)
+            log_step = epoch * len(train_loader) + i
+            logger({"train/accuracy": accuracy, "train/loss": loss}, step=log_step)
             running_loss = 0.0
             correct = 0
 
 
 class ValidationMetrics:
+    """
+    Class to calculate and store various validation metrics including F1 score, recall,
+    precision, false acceptance, and false rejection.
+
+    Parameters:
+        confusion_matrix (np.ndarray): Multi-label confusion matrix for the validation data.
+
+    Attributes:
+        f1 (float): F1 score of the model.
+        recall (float): Recall score of the model.
+        precision (float): Precision score of the model.
+        false_acceptance (float): False acceptance rate.
+        false_rejection (float): False rejection rate.
+    """
     def __init__(self, confusion_matrix):
         true_neg = confusion_matrix[0, 0, 0]
         false_neg = confusion_matrix[0, 1, 0]
@@ -73,6 +96,13 @@ class ValidationMetrics:
         # TODO: Maybe not 0?
 
     def __str__(self):
+        """
+        Provides a formatted string representation of validation metrics.
+
+        Returns:
+            str: Formatted string of metrics including F1 score, recall, precision,
+                 false acceptance, and false rejection.
+        """
         return rf"""Metrics:
     F1: {self.f1:.2f},
     Recall: {self.recall:.2f},
@@ -83,16 +113,15 @@ class ValidationMetrics:
 
 def validate(model, val_loader: torch.utils.data.DataLoader):
     """
-    Validates the model and calculates F1 score.
+    Validates the model on a validation dataset and computes performance metrics.
 
     Parameters:
         model (torch.nn.Module): The trained CNN model.
         val_loader (DataLoader): DataLoader for the validation set.
 
     Returns:
-        float: Recall score.
-        float: Precision score.
-        float: Validation F1 score.
+        ValidationMetrics: Validation metrics including F1 score, recall, precision,
+                           false acceptance, and false rejection.
     """
     model.eval()
     preds, targets = [], []
