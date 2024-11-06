@@ -125,7 +125,7 @@ class ClipsStatistics:
         
     
     def __str__(self):
-        return rf"""Statstics:
+        return rf"""Statistics:
         Total files: {self.files_count},
         Total duration: {self.total_duration:.2f} sec,
         Average duration: {self.average_duration:.2f} sec, 
