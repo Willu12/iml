@@ -50,7 +50,7 @@ def train(model, train_loader, criterion, optimizer, epoch, logger, step):
 class ValidationMetrics:
     """
     Class to calculate and store various validation metrics including F1 score, recall,
-    precision, false acceptance, and false rejection.
+    precision, false acceptance, false rejection, and accuracy.
 
     Parameters:
         confusion_matrix (np.ndarray): Multi-label confusion matrix for the validation data.
@@ -61,6 +61,7 @@ class ValidationMetrics:
         precision (float): Precision score of the model.
         false_acceptance (float): False acceptance rate.
         false_rejection (float): False rejection rate.
+        accuracy (float): Accuracy of the model.
     """
     def __init__(self, confusion_matrix):
         true_neg = confusion_matrix[0, 0, 0]
@@ -71,6 +72,7 @@ class ValidationMetrics:
         real_pos = true_pos + false_neg
         real_neg = true_neg + false_pos
         model_pos = true_pos + false_pos
+        total = true_pos + true_neg + false_pos + false_neg
 
         if real_pos != 0:
             self.false_rejection = false_neg / real_pos
@@ -89,11 +91,14 @@ class ValidationMetrics:
             self.precision = 0
 
         if model_pos + real_pos != 0:
-            # https://en.wikipedia.org/wiki/F-score#Definition
             self.f1 = (2 * true_pos) / (model_pos + real_pos)
         else:
             self.f1 = 0
-        # TODO: Maybe not 0?
+
+        if total != 0:
+            self.accuracy = (true_pos + true_neg) / total
+        else:
+            self.accuracy = 0
 
     def __str__(self):
         """
@@ -105,6 +110,7 @@ class ValidationMetrics:
         """
         return rf"""Metrics:
     F1: {self.f1:.2f},
+    Accuracy: {self.accuracy:.2f},
     Recall: {self.recall:.2f},
     Precision: {self.precision:.2f},
     False acceptance: {self.false_acceptance:.2f},
