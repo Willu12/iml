@@ -4,8 +4,8 @@ DataLoader preparation for training, validation, and testing.
 """
 
 import os
-from PIL import Image
 from torch.utils.data import DataLoader, Dataset
+from PIL import Image
 from .config import VALID_ACCESS_LABELS, TRAIN_DIR, VAL_DIR, TEST_DIR
 
 
@@ -45,6 +45,7 @@ class SpectrogramDataset(Dataset):
         img_path = self.files[idx]
         speaker_id = img_path.split("/")[-1].split("_")[0]
         label = int(speaker_id in VALID_ACCESS_LABELS)
+
         image = Image.open(img_path).convert("L")
 
         if self.transform:

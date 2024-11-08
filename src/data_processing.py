@@ -4,8 +4,10 @@ spectrogram generation, and dataset preparation.
 """
 
 import os
+import json
 import numpy as np
 import librosa
+from PIL import Image
 from sklearn.model_selection import train_test_split
 from .config import (
     SAMPLE_RATE,
@@ -155,3 +157,75 @@ def prepare_datasets(
         train_files, test_size=val_ratio_local, random_state=RANDOM_STATE
     )
     return train_files, val_files, test_files
+
+
+def load_gray_image_normalized(filepath):
+    """
+    Loads an image file, converts it to grayscale, and normalizes pixel values.
+
+    Parameters:
+        filepath (str): Path to the image file.
+
+    Returns:
+        np.ndarray: Normalized grayscale image as a 2D array with values between 0 and 1.
+    """
+    image = Image.open(filepath).convert("L")  # Convert to grayscale
+
+    # Convert image to a NumPy array and normalize to [0, 1]
+    return np.array(image, dtype=np.float32) / 255.0
+
+
+def compute_mean_std_from_images(directory):
+    """
+    Computes the mean and standard deviation of pixel values across all grayscale images in a directory.
+
+    Parameters:
+        directory (str): Directory containing image files.
+
+    Returns:
+        tuple[float, float]: Tuple of overall mean and standard deviation of pixel values.
+    """
+    means, stds = [], []
+
+    for filename in os.listdir(directory):
+        if filename.endswith(".png"):
+            image_path = os.path.join(directory, filename)
+            image_array = load_gray_image_normalized(image_path)
+
+            means.append(np.mean(image_array))
+            stds.append(np.std(image_array))
+
+    overall_mean = np.mean(means)
+    overall_std = np.mean(stds)
+
+    return overall_mean, overall_std
+
+
+def save_mean_std(mean, std, file_path):
+    """
+    Saves mean and standard deviation to a JSON file.
+
+    Parameters:
+        mean (float): Mean value to save.
+        std (float): Standard deviation value to save.
+        file_path (str): Path to the JSON file.
+    """
+    data = {"mean": float(mean), "std": float(std)}
+    with open(file_path, "w") as f:
+        json.dump(data, f)
+
+
+def load_mean_std(file_path):
+    """
+    Loads mean and standard deviation from a JSON file.
+
+    Parameters:
+        file_path (str): Path to the JSON file.
+
+    Returns:
+        tuple: A tuple containing mean and std.
+    """
+    with open(file_path, "r") as f:
+        data = json.load(f)
+    mean, std = data["mean"], data["std"]
+    return mean, std
