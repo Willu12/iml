@@ -1,5 +1,5 @@
 """
-Module for processing audio files, including loading, splitting into clips, 
+Module for processing audio files, including loading, splitting into clips,
 spectrogram generation, and dataset preparation.
 """
 
@@ -17,7 +17,7 @@ from .config import (
 )
 
 
-def list_audio_files(data_dir):
+def list_all_audio_files(data_dir):
     """
     Lists all supported files in a directory.
     Currently, it filters for '.wav' files that do not start with '._'.
@@ -132,22 +132,26 @@ def create_spectrogram(audio, sr=SAMPLE_RATE, n_fft=1024, hop_length=512):
     log_spectrogram = librosa.power_to_db(spectrogram, ref=np.max)
     return log_spectrogram
 
+def list_balanced_audio_files(data_dir):
+    return
+
 
 def prepare_datasets(
-    data_dir, test_size=TEST_DATASET_RATIO, validation_size=VALIDATION_DATASET_RATIO
+    data_dir, listing_data_func=list_all_audio_files, test_size=TEST_DATASET_RATIO, validation_size=VALIDATION_DATASET_RATIO
 ):
     """
     Splits audio files into training, validation, and test sets.
 
     Parameters:
-        data_dir (str): Directory containing .wav files.
+        data_dir (str): Directory containing audio files.
+        listing_data_func (func): Function to list audio files in a directory.
         test_size (float): Proportion of files to include in the test split.
         validation_size (float): Proportion of files to include in the validation split.
 
     Returns:
         tuple: Tuple containing lists of file paths for train, validation, and test sets.
     """
-    files = list_audio_files(data_dir)
+    files = listing_data_func(data_dir)
     train_files, test_files = train_test_split(
         files, test_size=test_size, random_state=RANDOM_STATE
     )
