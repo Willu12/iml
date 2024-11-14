@@ -16,6 +16,8 @@ from .config import (
     RANDOM_STATE,
 )
 
+from collections import defaultdict
+import random
 
 def list_all_audio_files(data_dir):
     """
@@ -34,6 +36,112 @@ def list_all_audio_files(data_dir):
         if f.endswith(".wav") and not f.startswith("._")
     ]
 
+def list_audio_files_recursively(data_dir):
+    """
+    Lists all supported '.wav' files in a directory and its subdirectories.
+    Currently, it filters for '.wav' files that do not start with '._'.
+
+    Parameters:
+        data_dir (str): Directory containing .wav files.
+
+    Returns:
+        list[str]: List of paths to audio files.
+    """
+    audio_files = []
+    for root, _, files in os.walk(data_dir):
+        for f in files:
+            if f.endswith(".wav") and not f.startswith("._"):
+                audio_files.append(os.path.join(root, f))
+    return audio_files
+
+def extract_metadata(filepath):
+    """
+    Extracts user, script, and recording device from the given filepath.
+    Assumes the filename format is: user_script_device.wav
+    """
+    filename = os.path.basename(filepath)
+    parts = filename.split('_')
+    if len(parts) >= 3:
+        user = parts[0]
+        script = parts[1]
+        device = parts[2].split('.')[0]  # Removing the extension
+        print(f"Extracted Metadata - User: {user}, Script: {script}, Device: {device}")
+        return user, script, device
+    print(f"Failed to extract metadata from: {filepath}")
+    return None, None, None
+
+def group_files_by_user(filepaths):
+    """
+    Groups the file paths by user.
+    """
+    user_files = defaultdict(list)
+    for filepath in filepaths:
+        user, _, _ = extract_metadata(filepath)
+        if user:
+            user_files[user].append(filepath)
+    print("\nGrouped Files by User:")
+    for user, files in user_files.items():
+        print(f"User: {user}, Files: {files}")
+    return user_files
+
+def group_files_by_device(filepaths):
+    """
+    Groups the file paths by recording device.
+    """
+    device_files = defaultdict(list)
+    for filepath in filepaths:
+        _, _, device = extract_metadata(filepath)
+        if device:
+            device_files[device].append(filepath)
+    print("\nGrouped Files by Device:")
+    for device, files in device_files.items():
+        print(f"Device: {device}, Files: {files}")
+    return device_files
+
+def balance_files(file_groups, max_files_per_group):
+    """
+    Balances the number of files per group by randomly selecting up to max_files_per_group.
+    If a group has fewer files, it will remain unchanged.
+    
+    Parameters:
+        file_groups (dict): A dictionary where keys are group identifiers (e.g., user or device)
+                            and values are lists of file paths.
+        max_files_per_group (int): The maximum number of files allowed per group.
+
+    Returns:
+        dict: A balanced dictionary of file groups.
+    """
+    balanced_files = {}
+    for group, files in file_groups.items():
+        if len(files) > max_files_per_group:
+            balanced_files[group] = random.sample(files, max_files_per_group)
+            print(f"Balanced Group: {group} - Reduced to {max_files_per_group} Files")
+        else:
+            balanced_files[group] = files
+            print(f"Balanced Group: {group} - Kept All {len(files)} Files")
+    return balanced_files
+
+def balance_recordings_by_user(filepaths, max_files_per_user):
+    """
+    Balances the recordings per user.
+    """
+    user_files = group_files_by_user(filepaths)
+    balanced_files = balance_files(user_files, max_files_per_user)
+    print("\nBalanced Recordings by User:")
+    for user, files in balanced_files.items():
+        print(f"User: {user}, Files: {files}")
+    return balanced_files
+
+def balance_recordings_by_device(filepaths, max_files_per_device):
+    """
+    Balances the recordings per recording device.
+    """
+    device_files = group_files_by_device(filepaths)
+    balanced_files = balance_files(device_files, max_files_per_device)
+    print("\nBalanced Recordings by Device:")
+    for device, files in balanced_files.items():
+        print(f"Device: {device}, Files: {files}")
+    return balanced_files
 
 def load_audio(file_path, sr=SAMPLE_RATE):
     """
