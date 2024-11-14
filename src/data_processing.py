@@ -102,7 +102,7 @@ def balance_files(file_groups, max_files_per_group):
     """
     Balances the number of files per group by randomly selecting up to max_files_per_group.
     If a group has fewer files, it will remain unchanged.
-    
+
     Parameters:
         file_groups (dict): A dictionary where keys are group identifiers (e.g., user or device)
                             and values are lists of file paths.
@@ -240,8 +240,13 @@ def create_spectrogram(audio, sr=SAMPLE_RATE, n_fft=1024, hop_length=512):
     log_spectrogram = librosa.power_to_db(spectrogram, ref=np.max)
     return log_spectrogram
 
-def list_balanced_audio_files(data_dir):
-    return
+def list_balanced_audio_files(data_dir, max_files_per_user=3):
+    """
+    Lists all supported files in a directory and balances the recordings per user.
+    """
+    audio_files = list_all_audio_files(data_dir)
+    balanced_files = balance_recordings_by_user(audio_files, max_files_per_user)
+    return balanced_files
 
 
 def prepare_datasets(
