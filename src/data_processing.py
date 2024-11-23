@@ -5,6 +5,7 @@ spectrogram generation, and dataset preparation.
 
 import os
 import json
+from matplotlib import pyplot as plt
 import numpy as np
 import librosa
 from PIL import Image
@@ -16,7 +17,7 @@ from .config import (
     RANDOM_STATE,
 )
 
-from collections import defaultdict
+from collections import Counter, defaultdict
 import random
 
 def list_all_audio_files(data_dir):
@@ -36,112 +37,28 @@ def list_all_audio_files(data_dir):
         if f.endswith(".wav") and not f.startswith("._")
     ]
 
-def list_audio_files_recursively(data_dir):
+def list_audio_files_recursively(data_dir, allowed_dirs=None):
     """
     Lists all supported '.wav' files in a directory and its subdirectories.
-    Currently, it filters for '.wav' files that do not start with '._'.
+    Optionally filters the directories to consider only specific ones.
 
     Parameters:
         data_dir (str): Directory containing .wav files.
+        allowed_dirs (list[str], optional): List of directory names to filter. Defaults to None.
 
     Returns:
         list[str]: List of paths to audio files.
     """
     audio_files = []
-    for root, _, files in os.walk(data_dir):
+    for root, dirs, files in os.walk(data_dir):
+        # If allowed_dirs is provided, filter the directories
+        if allowed_dirs is not None:
+            dirs[:] = [d for d in dirs if d in allowed_dirs]
+
         for f in files:
             if f.endswith(".wav") and not f.startswith("._"):
                 audio_files.append(os.path.join(root, f))
     return audio_files
-
-def extract_metadata(filepath):
-    """
-    Extracts user, script, and recording device from the given filepath.
-    Assumes the filename format is: user_script_device.wav
-    """
-    filename = os.path.basename(filepath)
-    parts = filename.split('_')
-    if len(parts) >= 3:
-        user = parts[0]
-        script = parts[1]
-        device = parts[2].split('.')[0]  # Removing the extension
-        print(f"Extracted Metadata - User: {user}, Script: {script}, Device: {device}")
-        return user, script, device
-    print(f"Failed to extract metadata from: {filepath}")
-    return None, None, None
-
-def group_files_by_user(filepaths):
-    """
-    Groups the file paths by user.
-    """
-    user_files = defaultdict(list)
-    for filepath in filepaths:
-        user, _, _ = extract_metadata(filepath)
-        if user:
-            user_files[user].append(filepath)
-    print("\nGrouped Files by User:")
-    for user, files in user_files.items():
-        print(f"User: {user}, Files: {files}")
-    return user_files
-
-def group_files_by_device(filepaths):
-    """
-    Groups the file paths by recording device.
-    """
-    device_files = defaultdict(list)
-    for filepath in filepaths:
-        _, _, device = extract_metadata(filepath)
-        if device:
-            device_files[device].append(filepath)
-    print("\nGrouped Files by Device:")
-    for device, files in device_files.items():
-        print(f"Device: {device}, Files: {files}")
-    return device_files
-
-def balance_files(file_groups, max_files_per_group):
-    """
-    Balances the number of files per group by randomly selecting up to max_files_per_group.
-    If a group has fewer files, it will remain unchanged.
-
-    Parameters:
-        file_groups (dict): A dictionary where keys are group identifiers (e.g., user or device)
-                            and values are lists of file paths.
-        max_files_per_group (int): The maximum number of files allowed per group.
-
-    Returns:
-        dict: A balanced dictionary of file groups.
-    """
-    balanced_files = {}
-    for group, files in file_groups.items():
-        if len(files) > max_files_per_group:
-            balanced_files[group] = random.sample(files, max_files_per_group)
-            print(f"Balanced Group: {group} - Reduced to {max_files_per_group} Files")
-        else:
-            balanced_files[group] = files
-            print(f"Balanced Group: {group} - Kept All {len(files)} Files")
-    return balanced_files
-
-def balance_recordings_by_user(filepaths, max_files_per_user):
-    """
-    Balances the recordings per user.
-    """
-    user_files = group_files_by_user(filepaths)
-    balanced_files = balance_files(user_files, max_files_per_user)
-    print("\nBalanced Recordings by User:")
-    for user, files in balanced_files.items():
-        print(f"User: {user}, Files: {files}")
-    return balanced_files
-
-def balance_recordings_by_device(filepaths, max_files_per_device):
-    """
-    Balances the recordings per recording device.
-    """
-    device_files = group_files_by_device(filepaths)
-    balanced_files = balance_files(device_files, max_files_per_device)
-    print("\nBalanced Recordings by Device:")
-    for device, files in balanced_files.items():
-        print(f"Device: {device}, Files: {files}")
-    return balanced_files
 
 def load_audio(file_path, sr=SAMPLE_RATE):
     """
@@ -346,3 +263,91 @@ def load_mean_std(file_path):
         data = json.load(f)
     mean, std = data["mean"], data["std"]
     return mean, std
+
+def extract_metadata(wav_files, valid_access_labels):
+    """
+    Extract metadata from a list of .wav file paths.
+
+    Args:
+        wav_files (list of str): List of paths to .wav files.
+        valid_access_labels (set): Set of speakers with valid access.
+
+    Returns:
+        list of dict: List of metadata dictionaries for each .wav file.
+    """
+    metadata = []
+    
+    for path in wav_files:
+        filename = os.path.basename(path).replace(".wav", "")
+        parts = filename.split("_")
+        if len(parts) < 4:
+            raise ValueError(f"Filename '{filename}' does not contain enough parts for parsing.")
+        
+        speaker, script, device, room = parts[0], parts[1], parts[2], parts[3]
+        metadata.append({
+            "path": path,
+            "speaker": speaker,
+            "script": script,
+            "device": device,
+            "room": room,
+            "authorized": speaker in valid_access_labels
+        })
+    
+    return metadata
+
+def exclude_overlapping_scripts(train, validation, test):
+    # Collect training set scripts and devices
+    train_combinations = set((file["script"], file["device"]) for file in train)
+
+    # Exclude overlapping combinations in validation and test sets
+    validation = [file for file in validation if (file["script"], file["device"]) not in train_combinations]
+    test = [file for file in test if (file["script"], file["device"]) not in train_combinations]
+
+    # Ensure validation and test sets have data by re-sampling from available files if empty
+    if not validation:
+        validation = random.sample(train, min(10, len(train)))
+    if not test:
+        test = random.sample(train, min(10, len(train)))
+
+    return validation, test
+
+def compute_statistics(files):
+    speakers = Counter(file["speaker"] for file in files)
+    devices = Counter(file["device"] for file in files)
+    rooms = Counter(file["room"] for file in files)
+    authorized_count = sum(1 for file in files if file["authorized"])
+    unauthorized_count = len(files) - authorized_count
+
+    return {
+        "Total Files": len(files),
+        "Authorized": authorized_count,
+        "Unauthorized": unauthorized_count,
+        "Speakers": speakers,
+        "Devices": devices,
+        "Rooms": rooms,
+    }
+    
+def display_dataset_statistics(train_files, validation_files, test_files):
+    """
+    Computes and displays statistics for training, validation, and test datasets.
+
+    Parameters:
+        train_files (list): List of files in the training dataset.
+        validation_files (list): List of files in the validation dataset.
+        test_files (list): List of files in the test dataset.
+
+    Returns:
+        None
+    """
+    datasets = {
+        "Train Dataset": train_files,
+        "Validation Dataset": validation_files,
+        "Test Dataset": test_files,
+    }
+    
+    for dataset_name, files in datasets.items():
+        stats = compute_statistics(files)
+        print(f"{dataset_name} Statistics:", stats)
+
+def save_spectrogram(spectrogram, output_path):
+    plt.imsave(output_path, spectrogram, cmap='gray')
