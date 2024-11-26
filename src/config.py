@@ -1,6 +1,7 @@
 """ Constant values consistent through the whole project """
 
 SAMPLE_RATE = 16000
+HOP_LENGTH = 512
 
 # Dataset split configuration
 TEST_DATASET_RATIO = 0.2

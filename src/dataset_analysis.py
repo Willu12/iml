@@ -5,7 +5,7 @@ including spectrogram plotting and duration statistics.
 
 import matplotlib.pyplot as plt
 import numpy as np
-from .config import SAMPLE_RATE
+from .config import HOP_LENGTH, SAMPLE_RATE
 
 
 def plot_spectrogram(spectrogram, title="Spectrogram"):
@@ -27,6 +27,21 @@ def plot_spectrogram(spectrogram, title="Spectrogram"):
     plt.ylabel("Frequency")
     plt.show()
 
+def duration_statistics_spectrograms(spectograms, sr=SAMPLE_RATE, hop_length = HOP_LENGTH):
+    """
+    Computes duration statistics for a list of audio spectograms.
+
+    Parameters:
+        spectograms (np.ndarray): Log-mel spectrogram of the audio.
+        sr (int): Sampling rate of the spectogram.
+        hop_length (int) : Hop Length used to create spectogram.
+
+    Returns:
+        DurationStatistics: An instance containing calculated statistics.
+    """
+    duration_statistics =  DurationStatistics.__new__(DurationStatistics)
+    duration_statistics.statistics_from_spectrograms(spectograms, sr, hop_length)
+    return duration_statistics
 
 def duration_statistics(clips, sr=SAMPLE_RATE):
     """
@@ -56,13 +71,20 @@ class DurationStatistics:
         average_duration (float): Average duration of clips in seconds.
         duration_range (list[float]): Minimum and maximum durations of clips in seconds.
     """
-
-    def __init__(self, clips, sr=SAMPLE_RATE):
-        self.durations = [len(clip) / sr for clip in clips]
+    
+    def _update_from_durations(self, durations):
         self.files_count = len(self.durations)
         self.total_duration = sum(self.durations)
         self.average_duration = np.mean(self.durations)
         self.duration_range = [min(self.durations), max(self.durations)]
+
+    def __init__(self, clips, sr=SAMPLE_RATE):
+        self.durations = [len(clip) / sr for clip in clips]
+        self._update_from_durations(self.durations)
+
+    def statistics_from_spectrograms(self, spectrograms, sr = SAMPLE_RATE, hop_length = HOP_LENGTH):
+        self.durations = [spectrogram.shape[1] * hop_length/sr for spectrogram in spectrograms]
+        self._update_from_durations(self.durations)
 
     def __str__(self):
         return rf"""Statistics:
