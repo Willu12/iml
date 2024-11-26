@@ -10,6 +10,7 @@ import librosa
 from PIL import Image
 from sklearn.model_selection import train_test_split
 from .config import (
+    HOP_LENGTH,
     SAMPLE_RATE,
     TEST_DATASET_RATIO,
     VALIDATION_DATASET_RATIO,
@@ -113,7 +114,7 @@ class SOAAudioClips:
             yield file_path, clip
 
 
-def create_spectrogram(audio, sr=SAMPLE_RATE, n_fft=1024, hop_length=512):
+def create_spectrogram(audio, sr=SAMPLE_RATE, n_fft=1024, hop_length=HOP_LENGTH):
     """
     Converts an audio signal into a log-mel spectrogram.
 
