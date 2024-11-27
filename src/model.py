@@ -77,3 +77,43 @@ class OriginalSizeCNN(nn.Module):
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
         return x
+    
+class DropoutCNN(nn.Module):
+    """
+    CNN for 94x128 grayscale images with dropout
+    """
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=16, kernel_size=3, padding=1)
+        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
+        
+        self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, padding=1)
+        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
+        
+        self.conv3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1)
+        self.pool3 = nn.MaxPool2d(kernel_size=2, stride=2)
+        
+        self.flattened_size = 64 * (94 // 8) * (128 // 8)
+        
+        self.fc1 = nn.Linear(self.flattened_size, 128)
+        self.fc2 = nn.Linear(128, 2)
+
+        self.dropoutFL = nn.Dropout(p=0.5)
+
+        self.dropoutCNL = nn.Dropout(p=0.15)
+
+    
+    def forward(self, x):
+        x = self.pool1(F.relu(self.conv1(x)))
+        x = self.dropoutCNL(x)
+        x = self.pool2(F.relu(self.conv2(x)))
+        x = self.dropoutCNL(x)
+        x = self.pool3(F.relu(self.conv3(x)))
+        x = self.dropoutCNL(x)
+
+        x = x.view(-1, self.flattened_size)
+        
+        x = F.relu(self.fc1(x))
+        x = self.dropoutFL(x)
+        x = self.fc2(x)
+        return x
