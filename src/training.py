@@ -63,6 +63,7 @@ class ValidationMetrics:
         false_rejection (float): False rejection rate.
         accuracy (float): Accuracy of the model.
     """
+
     def __init__(self, confusion_matrix):
         true_neg = confusion_matrix[0, 0, 0]
         false_neg = confusion_matrix[0, 1, 0]
@@ -130,6 +131,22 @@ def validate(model, val_loader: torch.utils.data.DataLoader):
                            false acceptance, and false rejection.
     """
     model.eval()
+    preds, targets = model_validate(model, val_loader)
+    return ValidationMetrics(multilabel_confusion_matrix(targets, preds))
+
+
+def model_validate(model, val_loader: torch.utils.data.DataLoader):
+    """
+    processes validation of given model on a validation dataset and returns predictions and targets.
+
+    Parameters:
+        model (torch.nn.Module): The trained CNN model.
+        val_loader (DataLoader): DataLoader for the validation set.
+
+    Returns:
+        predictions (np.ndarray): Predictions of the model on the validation dataset.
+        targets (np.ndarray): Targets of the model on the validation dataset.
+    """
     preds, targets = [], []
     with torch.no_grad():
         for data, target in val_loader:
@@ -138,4 +155,20 @@ def validate(model, val_loader: torch.utils.data.DataLoader):
             pred = output.argmax(dim=1)
             preds.extend(pred.cpu().numpy())
             targets.extend(target.numpy())
-    return ValidationMetrics(multilabel_confusion_matrix(targets, preds))
+    return preds, targets
+
+
+def monte_carlo_predictions(model, val_loader: torch.utils.data.DataLoader):
+    """
+    processes validation for monte carlo predictions on a validation dataset and returns predictions.
+
+    Parameters:
+        model (torch.nn.Module): The trained CNN model.
+        val_loader (DataLoader): DataLoader for the validation set.
+
+    Returns:
+        predictions (np.ndarray): Predictions of the model on the validation dataset.
+    """
+    model.train()
+    preds, targets = model_validate(model, val_loader)
+    return preds
