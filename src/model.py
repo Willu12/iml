@@ -87,6 +87,7 @@ class SingleLayerModel(nn.Module):
     def __init__(self, layer):
         super(SingleLayerModel, self).__init__()
         self.layer = layer
+        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
 
     def forward(self, x):
         return self.layer(x)
