@@ -22,3 +22,6 @@ VALID_ACCESS_LABELS = {
     "m6",
     "m8",
 }  # Speakers of such labels should be admitted to enter
+
+#DATA_TRAIN_CONFIGURATION
+PATIENCE_THRESHOLD = 5
