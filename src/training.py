@@ -63,6 +63,7 @@ class ValidationMetrics:
         false_rejection (float): False rejection rate.
         accuracy (float): Accuracy of the model.
     """
+
     def __init__(self, confusion_matrix):
         true_neg = confusion_matrix[0, 0, 0]
         false_neg = confusion_matrix[0, 1, 0]
@@ -129,13 +130,18 @@ def validate(model, val_loader: torch.utils.data.DataLoader):
         ValidationMetrics: Validation metrics including F1 score, recall, precision,
                            false acceptance, and false rejection.
     """
+    preds, targets = predict(model, val_loader)
+    return ValidationMetrics(multilabel_confusion_matrix(targets, preds))
+
+
+def predict(model, data_loader: torch.utils.data.DataLoader):
     model.eval()
     preds, targets = [], []
     with torch.no_grad():
-        for data, target in val_loader:
+        for data, target in data_loader:
             data = data.to(model.device)
             output = model(data)
             pred = output.argmax(dim=1)
             preds.extend(pred.cpu().numpy())
             targets.extend(target.numpy())
-    return ValidationMetrics(multilabel_confusion_matrix(targets, preds))
+    return preds, targets
