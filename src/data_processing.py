@@ -1,10 +1,11 @@
 """
-Module for processing audio files, including loading, splitting into clips, 
+Module for processing audio files, including loading, splitting into clips,
 spectrogram generation, and dataset preparation.
 """
 
 import os
 import json
+from matplotlib import pyplot as plt
 import numpy as np
 import librosa
 from PIL import Image
@@ -16,8 +17,10 @@ from .config import (
     RANDOM_STATE,
 )
 
+from collections import Counter, defaultdict
+import random
 
-def list_audio_files(data_dir):
+def list_all_audio_files(data_dir):
     """
     Lists all supported files in a directory.
     Currently, it filters for '.wav' files that do not start with '._'.
@@ -34,6 +37,28 @@ def list_audio_files(data_dir):
         if f.endswith(".wav") and not f.startswith("._")
     ]
 
+def list_audio_files_recursively(data_dir, allowed_dirs=None):
+    """
+    Lists all supported '.wav' files in a directory and its subdirectories.
+    Optionally filters the directories to consider only specific ones.
+
+    Parameters:
+        data_dir (str): Directory containing .wav files.
+        allowed_dirs (list[str], optional): List of directory names to filter. Defaults to None.
+
+    Returns:
+        list[str]: List of paths to audio files.
+    """
+    audio_files = []
+    for root, dirs, files in os.walk(data_dir):
+        # If allowed_dirs is provided, filter the directories
+        if allowed_dirs is not None:
+            dirs[:] = [d for d in dirs if d in allowed_dirs]
+
+        for f in files:
+            if f.endswith(".wav") and not f.startswith("._"):
+                audio_files.append(os.path.join(root, f))
+    return audio_files
 
 def load_audio(file_path, sr=SAMPLE_RATE):
     """
@@ -132,22 +157,31 @@ def create_spectrogram(audio, sr=SAMPLE_RATE, n_fft=1024, hop_length=512):
     log_spectrogram = librosa.power_to_db(spectrogram, ref=np.max)
     return log_spectrogram
 
+def list_balanced_audio_files(data_dir, max_files_per_user=3):
+    """
+    Lists all supported files in a directory and balances the recordings per user.
+    """
+    audio_files = list_all_audio_files(data_dir)
+    balanced_files = balance_recordings_by_user(audio_files, max_files_per_user)
+    return balanced_files
+
 
 def prepare_datasets(
-    data_dir, test_size=TEST_DATASET_RATIO, validation_size=VALIDATION_DATASET_RATIO
+    data_dir, listing_data_func=list_all_audio_files, test_size=TEST_DATASET_RATIO, validation_size=VALIDATION_DATASET_RATIO
 ):
     """
     Splits audio files into training, validation, and test sets.
 
     Parameters:
-        data_dir (str): Directory containing .wav files.
+        data_dir (str): Directory containing audio files.
+        listing_data_func (func): Function to list audio files in a directory.
         test_size (float): Proportion of files to include in the test split.
         validation_size (float): Proportion of files to include in the validation split.
 
     Returns:
         tuple: Tuple containing lists of file paths for train, validation, and test sets.
     """
-    files = list_audio_files(data_dir)
+    files = listing_data_func(data_dir)
     train_files, test_files = train_test_split(
         files, test_size=test_size, random_state=RANDOM_STATE
     )
@@ -229,3 +263,91 @@ def load_mean_std(file_path):
         data = json.load(f)
     mean, std = data["mean"], data["std"]
     return mean, std
+
+def extract_metadata(wav_files, valid_access_labels):
+    """
+    Extract metadata from a list of .wav file paths.
+
+    Args:
+        wav_files (list of str): List of paths to .wav files.
+        valid_access_labels (set): Set of speakers with valid access.
+
+    Returns:
+        list of dict: List of metadata dictionaries for each .wav file.
+    """
+    metadata = []
+    
+    for path in wav_files:
+        filename = os.path.basename(path).replace(".wav", "")
+        parts = filename.split("_")
+        if len(parts) < 4:
+            raise ValueError(f"Filename '{filename}' does not contain enough parts for parsing.")
+        
+        speaker, script, device, room = parts[0], parts[1], parts[2], parts[3]
+        metadata.append({
+            "path": path,
+            "speaker": speaker,
+            "script": script,
+            "device": device,
+            "room": room,
+            "authorized": speaker in valid_access_labels
+        })
+    
+    return metadata
+
+def exclude_overlapping_scripts(train, validation, test):
+    # Collect training set scripts and devices
+    train_combinations = set((file["script"], file["device"]) for file in train)
+
+    # Exclude overlapping combinations in validation and test sets
+    validation = [file for file in validation if (file["script"], file["device"]) not in train_combinations]
+    test = [file for file in test if (file["script"], file["device"]) not in train_combinations]
+
+    # Ensure validation and test sets have data by re-sampling from available files if empty
+    if not validation:
+        validation = random.sample(train, min(10, len(train)))
+    if not test:
+        test = random.sample(train, min(10, len(train)))
+
+    return validation, test
+
+def compute_statistics(files):
+    speakers = Counter(file["speaker"] for file in files)
+    devices = Counter(file["device"] for file in files)
+    rooms = Counter(file["room"] for file in files)
+    authorized_count = sum(1 for file in files if file["authorized"])
+    unauthorized_count = len(files) - authorized_count
+
+    return {
+        "Total Files": len(files),
+        "Authorized": authorized_count,
+        "Unauthorized": unauthorized_count,
+        "Speakers": speakers,
+        "Devices": devices,
+        "Rooms": rooms,
+    }
+    
+def display_dataset_statistics(train_files, validation_files, test_files):
+    """
+    Computes and displays statistics for training, validation, and test datasets.
+
+    Parameters:
+        train_files (list): List of files in the training dataset.
+        validation_files (list): List of files in the validation dataset.
+        test_files (list): List of files in the test dataset.
+
+    Returns:
+        None
+    """
+    datasets = {
+        "Train Dataset": train_files,
+        "Validation Dataset": validation_files,
+        "Test Dataset": test_files,
+    }
+    
+    for dataset_name, files in datasets.items():
+        stats = compute_statistics(files)
+        print(f"{dataset_name} Statistics:", stats)
+
+def save_spectrogram(spectrogram, output_path):
+    plt.imsave(output_path, spectrogram, cmap='gray')

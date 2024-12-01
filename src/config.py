@@ -9,6 +9,7 @@ RANDOM_STATE = 42
 
 # Directory structure
 DATA_DIR = "./data"  # Directory where .wav files are stored
+DATA_DIR_SPECIFIC=DATA_DIR + "/ipad_balcony1" #example catalog used
 DATASET_DIR = "./datasets"  # Directory to store processed spectrograms
 TRAIN_DIR = f"{DATASET_DIR}/train/"
 VAL_DIR = f"{DATASET_DIR}/val/"
@@ -22,3 +23,6 @@ VALID_ACCESS_LABELS = {
     "m6",
     "m8",
 }  # Speakers of such labels should be admitted to enter
+
+#DATA_TRAIN_CONFIGURATION
+PATIENCE_THRESHOLD = 5
