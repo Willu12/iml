@@ -8,7 +8,6 @@ from torch.utils.data import DataLoader, Dataset
 from PIL import Image
 from .config import VALID_ACCESS_LABELS, TRAIN_DIR, VAL_DIR, TEST_DIR
 
-
 class SpectrogramDataset(Dataset):
     """
     Dataset class for loading spectrogram images and assigning labels.
