@@ -9,6 +9,7 @@ RANDOM_STATE = 42
 
 # Directory structure
 DATA_DIR = "./data"  # Directory where .wav files are stored
+DATA_DIR_SPECIFIC=DATA_DIR + "/ipad_balcony1" #example catalog used
 DATASET_DIR = "./datasets"  # Directory to store processed spectrograms
 TRAIN_DIR = f"{DATASET_DIR}/train/"
 VAL_DIR = f"{DATASET_DIR}/val/"
