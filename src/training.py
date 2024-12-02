@@ -130,12 +130,17 @@ def validate(model, val_loader: torch.utils.data.DataLoader):
         ValidationMetrics: Validation metrics including F1 score, recall, precision,
                            false acceptance, and false rejection.
     """
-    model.eval()
-    preds, targets = model_validate(model, val_loader)
+    preds, targets = predict(model, val_loader)
     return ValidationMetrics(multilabel_confusion_matrix(targets, preds))
 
 
-def model_validate(model, val_loader: torch.utils.data.DataLoader):
+def predict(model, data_loader: torch.utils.data.DataLoader):
+    model.eval()
+    preds, targets = model_validate(model, data_loader)
+    return ValidationMetrics(multilabel_confusion_matrix(targets, preds))
+
+
+def model_validate(model, data_loader: torch.utils.data.DataLoader):
     """
     processes validation of given model on a validation dataset and returns predictions and targets.
 
@@ -149,7 +154,7 @@ def model_validate(model, val_loader: torch.utils.data.DataLoader):
     """
     preds, targets = [], []
     with torch.no_grad():
-        for data, target in val_loader:
+        for data, target in data_loader:
             data = data.to(model.device)
             output = model(data)
             pred = output.argmax(dim=1)

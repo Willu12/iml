@@ -135,3 +135,26 @@ class EnsembleCNN(nn.Module):
         x = torch.cat(outputs, dim=1)
         out = self.classifier(x)
         return out
+
+
+# Function to create a model that returns the output of the specified layer using hooks
+class ModelWithLayerOutput(nn.Module):
+    """
+    This class creates a model that returns the output of a specified layer using forward hooks.
+    """
+
+    def __init__(self, model, target_layer_name):
+        super(ModelWithLayerOutput, self).__init__()
+        self.original_model = model
+        self.layer_output = []
+
+        def hook_fn(module, input, output):
+            self.layer_output.append(output)
+
+        for name, layer in model.named_children():
+            if name == target_layer_name:
+                layer.register_forward_hook(hook_fn)
+
+    def forward(self, x):
+        _ = self.original_model(x)
+        return self.layer_output[0] if self.layer_output else None
