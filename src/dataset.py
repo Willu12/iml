@@ -42,7 +42,7 @@ class SpectrogramDataset(Dataset):
             tuple: A tuple containing the transformed image and its label.
         """
         img_path = self.files[idx]
-        speaker_id = img_path.split("/")[-1].split("_")[0]
+        speaker_id = os.path.basename(img_path).split("_")[0]
         label = int(speaker_id in VALID_ACCESS_LABELS)
 
         image = Image.open(img_path).convert("L")
@@ -53,7 +53,7 @@ class SpectrogramDataset(Dataset):
         return image, label
 
 
-def prepare_dataset_loaders(transform, batch_size):
+def prepare_dataset_loaders(transform, batch_size, dataset_class=SpectrogramDataset):
     """
     Creates data loaders for the training, validation, and test datasets.
 
@@ -65,9 +65,9 @@ def prepare_dataset_loaders(transform, batch_size):
         tuple[DataLoader, DataLoader, DataLoader]: Data loaders for training, 
         validation, and testing datasets.
     """
-    train_dataset = SpectrogramDataset(TRAIN_DIR, transform=transform)
-    val_dataset = SpectrogramDataset(VAL_DIR, transform=transform)
-    test_dataset = SpectrogramDataset(TEST_DIR, transform=transform)
+    train_dataset = dataset_class(TRAIN_DIR, transform=transform)
+    val_dataset = dataset_class(VAL_DIR, transform=transform)
+    test_dataset = dataset_class(TEST_DIR, transform=transform)
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
