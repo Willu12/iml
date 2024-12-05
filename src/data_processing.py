@@ -7,6 +7,7 @@ import os
 import json
 from matplotlib import pyplot as plt
 import numpy as np
+import webrtcvad
 import librosa
 from PIL import Image
 from sklearn.model_selection import train_test_split
@@ -88,6 +89,52 @@ def load_dir_audios(file_paths, sr=SAMPLE_RATE):
     """
     return [load_audio(file_path, sr=sr) for file_path in file_paths]
 
+def is_speech(clip, sr, vad):
+    """
+    Checks if the majority of the audio clip contains speech using WebRTC VAD.
+
+    Parameters:
+        clip (np.ndarray): Audio signal array.
+        sr (int): Sampling rate of the audio.
+        vad (webrtcvad.Vad): WebRTC VAD instance.
+
+    Returns:
+        bool: True if the clip contains significant speech, False otherwise.
+    """
+    clip = (clip * 32768).astype(np.int16)  # Convert to 16-bit PCM
+    frame_duration_ms = 30  # WebRTC VAD works with 10, 20, or 30 ms frames
+    frame_size = int(sr * frame_duration_ms / 1000)
+    frames = [
+        clip[i : i + frame_size] for i in range(0, len(clip), frame_size)
+        if len(clip[i : i + frame_size]) == frame_size
+    ]
+    
+    speech_frames = sum(vad.is_speech(frame.tobytes(), sr) for frame in frames)
+    return speech_frames / len(frames) > 0.5  # More than 50% speech
+
+def split_into_clips_with_speech_filter(audio, clip_duration=3, sr=16000):
+    """
+    Splits audio into fixed-duration clips and filters by speech activity.
+
+    Parameters:
+        audio (np.ndarray): Audio signal array.
+        clip_duration (int): Duration of each clip in seconds.
+        sr (int): Sampling rate of the audio.
+
+    Returns:
+        list[np.ndarray]: List of audio clips with significant speech.
+    """
+    vad = webrtcvad.Vad()
+    vad.set_mode(2)  # Aggressiveness level: 0 (low) to 3 (high)
+    
+    clip_length = clip_duration * sr
+    clips = [
+        audio[i : i + clip_length]
+        for i in range(0, len(audio), clip_length)
+        if len(audio[i : i + clip_length]) == clip_length
+    ]
+    
+    return [clip for clip in clips if is_speech(clip, sr, vad)]
 
 def split_into_clips(audio, clip_duration=3, sr=SAMPLE_RATE):
     """
