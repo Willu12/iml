@@ -8,3 +8,5 @@ librosa
 wandb
 tqdm
 Pillow
+webrtcvad
+torchvggish

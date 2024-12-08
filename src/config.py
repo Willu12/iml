@@ -3,13 +3,13 @@
 SAMPLE_RATE = 16000
 
 # Dataset split configuration
-TEST_DATASET_RATIO = 0.2
-VALIDATION_DATASET_RATIO = 0.16
+TRAIN_DATASET_RATIO = 0.7
+VALIDATION_DATASET_RATIO = 0.15
 RANDOM_STATE = 42
 
 # Directory structure
 DATA_DIR = "./data"  # Directory where .wav files are stored
-DATA_DIR_SPECIFIC=DATA_DIR + "/ipad_balcony1" #example catalog used
+DATA_DIR_SPECIFIC=f"{DATA_DIR}/ipad_balcony1" #example catalog used
 DATASET_DIR = "./datasets"  # Directory to store processed spectrograms
 TRAIN_DIR = f"{DATASET_DIR}/train/"
 VAL_DIR = f"{DATASET_DIR}/val/"
