@@ -1,10 +1,6 @@
 """ Constant values consistent through the whole project """
 
 SAMPLE_RATE = 16000
-
-# Dataset split configuration
-TRAIN_DATASET_RATIO = 0.7
-VALIDATION_DATASET_RATIO = 0.15
 RANDOM_STATE = 42
 
 # Directory structure

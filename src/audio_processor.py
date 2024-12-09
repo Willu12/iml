@@ -51,14 +51,3 @@ class AudioProcessor:
     def save_spectrogram(self, spectrogram, output_path):
         """Saves the spectrogram as an image."""
         plt.imsave(output_path, spectrogram, cmap='gray')
-
-def compute_duration_statistics(audio_clips):
-    """Computes and returns statistics for audio clip durations."""
-    durations = [len(clip) for clip in audio_clips]
-    total_duration = sum(durations)
-    avg_duration = total_duration / len(durations) if durations else 0
-    return {
-        "total_clips": len(audio_clips),
-        "total_duration_seconds": total_duration / SAMPLE_RATE,
-        "average_duration_seconds": avg_duration / SAMPLE_RATE,
-    }
