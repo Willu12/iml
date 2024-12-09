@@ -1,27 +1,34 @@
+import random
 import numpy as np
 import librosa
 import librosa.display
 import webrtcvad
 import matplotlib.pyplot as plt
-from .config import SAMPLE_RATE
+from .config import SAMPLE_RATE, RANDOM_STATE
 
 class AudioProcessor:
     def __init__(self, sample_rate=SAMPLE_RATE):
         self.sample_rate = sample_rate
+        random.seed(RANDOM_STATE)
 
     def load_audio(self, file_path):
         """Loads an audio file."""
         audio, _ = librosa.load(file_path, sr=self.sample_rate)
         return audio
 
-    def split_audio(self, audio, clip_duration):
+    def split_audio(self, audio, clip_duration, factor = 1.5):
         """Splits audio into fixed-duration clips."""
         clip_length = int(clip_duration * self.sample_rate)
-        return [
-            audio[i:i + clip_length]
-            for i in range(0, len(audio), clip_length)
-            if len(audio[i:i + clip_length]) == clip_length
-        ]
+        num_segments = int((len(audio) / clip_length) * factor)
+        return [self.crop_audio(audio, clip_duration) for _ in range(num_segments)]
+    
+    def crop_audio(self, audio, crop_duration):
+        """Randomly crops an audio segment of specified duration."""
+        crop_length = int(crop_duration * self.sample_rate)
+        if len(audio) <= crop_length:
+            return audio  # If audio is shorter than the crop, return as is.
+        start = random.randint(0, len(audio) - crop_length)
+        return audio[start:start + crop_length]
 
     def filter_speech_clips(self, audio_clips):
         """Filters clips to retain only those with significant speech."""
