@@ -1,22 +1,42 @@
+import os
 import random
+from tqdm import tqdm
 import numpy as np
 import librosa
 import librosa.display
 import webrtcvad
 import matplotlib.pyplot as plt
 from .config import SAMPLE_RATE, RANDOM_STATE
+from .dataset_analysis import duration_statistics
 
 class AudioProcessor:
     def __init__(self, sample_rate=SAMPLE_RATE):
         self.sample_rate = sample_rate
         random.seed(RANDOM_STATE)
 
+    def process_audio_clips(self, soa_full_clips, output_dir, clip_duration=3):
+        """Processes and splits audio clips, saves spectrograms, and computes statistics."""
+        all_clips = []
+        for file_path, full_clip in tqdm(soa_full_clips, desc="Processing audio clips"):
+            clips = self.split_audio(full_clip, clip_duration)
+            speech_clips = self.filter_speech_clips(clips)
+            all_clips.extend(speech_clips)
+
+            for i, clip in enumerate(speech_clips):
+                spectrogram = self.create_spectrogram(clip)
+                output_path = os.path.join(
+                    output_dir, f"{os.path.basename(file_path).split('.')[0]}_{i}_clip.png"
+                )
+                self.save_spectrogram(spectrogram, output_path)
+
+        return duration_statistics(all_clips)
+
     def load_audio(self, file_path):
         """Loads an audio file."""
         audio, _ = librosa.load(file_path, sr=self.sample_rate)
         return audio
 
-    def split_audio(self, audio, clip_duration, factor = 1.5):
+    def split_audio(self, audio, clip_duration, factor = 1.1):
         """Splits audio into fixed-duration clips."""
         clip_length = int(clip_duration * self.sample_rate)
         num_segments = int((len(audio) / clip_length) * factor)
