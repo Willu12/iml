@@ -4,7 +4,10 @@ training, validation, and calculating performance metrics such as F1 score, reca
 and precision.
 """
 
+import os
 import torch
+import wandb
+from .config import PATIENCE_THRESHOLD
 from sklearn.metrics import multilabel_confusion_matrix
 
 
@@ -130,7 +133,15 @@ def validate(model, val_loader: torch.utils.data.DataLoader):
         ValidationMetrics: Validation metrics including F1 score, recall, precision,
                            false acceptance, and false rejection.
     """
-    preds, targets = predict(model, val_loader)
+    model.eval()
+    preds, targets = [], []
+    with torch.no_grad():
+        for data, target in val_loader:
+            data = data.to(model.device)
+            output = model(data)
+            pred = output.argmax(dim=1)
+            preds.extend(pred.cpu().numpy())
+            targets.extend(target.numpy())
     return ValidationMetrics(multilabel_confusion_matrix(targets, preds))
 
 
@@ -177,3 +188,71 @@ def monte_carlo_predictions(model, val_loader: torch.utils.data.DataLoader):
     model.train()
     preds, targets = model_validate(model, val_loader)
     return preds
+    return ValidationMetrics(multilabel_confusion_matrix(targets, preds))
+
+def do_train(name, train_loader, val_loader, config, model, criterion, optimizer, device, wandb_enabled=False):
+    if wandb_enabled:
+        run = wandb.init(name=name, project="iml", config=vars(config))
+ 
+    model.device = device
+    model.to(device)
+
+    saved = False
+    patience = 0
+    best_f1 = -1
+
+    for epoch in range(config.epochs):
+        print(f"Epoch {epoch+1}/{config.epochs}")
+
+        if wandb_enabled:
+            logger = wandb.log
+        else:
+            logger = lambda data,step: print(f"  Step {step}: {data}")
+
+        train(model, train_loader, criterion, optimizer, epoch, logger, len(train_loader) // 5 - 1)
+        metrics = validate(model, val_loader)
+        print(metrics)
+
+        if wandb_enabled:
+            wandb.log({"validation/recall": metrics.recall, "validation/accuracy": metrics.accuracy, "validation/precision": metrics.precision, "validation/f1": metrics.f1, "epoch": epoch+1})
+
+        if metrics.f1 < best_f1:
+            patience = patience + 1
+        else:
+            patience = 0
+            best_f1 = metrics.f1
+        if patience >= PATIENCE_THRESHOLD:
+            model_path = f"./models/{name}.pth"
+            os.makedirs(os.path.dirname(model_path), exist_ok=True)
+            torch.save(model.state_dict(), model_path)
+            saved = True
+
+    if(saved == False):
+            model_path = f"./models/{name}.pth"
+            os.makedirs(os.path.dirname(model_path), exist_ok=True)
+            torch.save(model.state_dict(), model_path)
+
+    if wandb_enabled: 
+        wandb.save(model_path)
+        wandb.finish()
+        return run
+    
+def do_test(name, test_loader, model_class, run, device, wandb_enabled = False):
+    if wandb_enabled:
+        wandb.init(name=name, project="iml", resume="must", id=run.id)
+ 
+    model = model_class()
+    model.device = device
+    model.to(device)
+
+    model_path = f"./models/{name}.pth"
+    model.load_state_dict(torch.load(model_path, map_location=device))
+
+    metrics = validate(model, test_loader)
+    print(metrics)
+
+    if wandb_enabled:
+        wandb.log({"test/recall": metrics.recall, "test/accuracy": metrics.accuracy, "test/precision": metrics.precision, "test/f1": metrics.f1})
+
+    if wandb_enabled: 
+        wandb.finish()
