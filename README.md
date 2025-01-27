@@ -71,7 +71,7 @@ iml/
 
 ### Other notebooks
 
-`initialization_and_activation.ipynb`, `pretrained_model_vggish.ipynb` and `pretrained_model.ipynb` notebooks contain step-by-step instructions on how to reproduce experiments performance in scope of this project as well as conclusions and links to reports.
+`initialization_and_activation.ipynb`, `pretrained_model_vggish.ipynb` and `pretrained_model.ipynb` notebooks contain step-by-step instructions on how to reproduce experiments performed in scope of this project as well as conclusions and links to reports.
 
 ## Model Definitions
 
