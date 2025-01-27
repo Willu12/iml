@@ -164,3 +164,19 @@ def prepare_dataset_loaders(
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
     return train_loader, val_loader, test_loader
+
+def prepare_dataset_loader(directory, transform, batch_size,dataset_class=SpectrogramDataset):
+    """
+    Creates data loader for data from given directory.
+
+    Parameters:
+        directory (string): Path to the dataset
+        transform (callable): Transformations to apply to the data.
+        batch_size (int): Number of samples per batch to load.
+
+    Returns:
+        DataLoader: DataLoader for given dataset.
+    """
+    dataset = dataset_class(directory, transform = transform)
+    dataLoader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
+    return dataLoader
