@@ -175,10 +175,45 @@ def model_validate(model, data_loader: torch.utils.data.DataLoader):
 
     return preds, targets
 
-def model_predictions(model, data_loader: torch.utils.data.DataLoader):
-    model.eval();
-    preds, _ = model_validate(model, data_loader)
-    return preds
+def process_predictions_and_features(model, data_loader, device="cpu"):
+    """
+    Processes predictions and feature maps of a given model on a dataset.
+
+    Parameters:
+        model (torch.nn.Module): The trained CNN model.
+        data_loader (torch.utils.data.DataLoader): DataLoader for the dataset.
+        device (str): Device to perform computations on (default: "cpu").
+
+    Returns:
+        predictions (np.ndarray): Predictions of the model on the dataset.
+        feature_vectors (np.ndarray): Flattened feature vectors from the model.
+    """
+    model.to(device)
+    model.eval()
+
+    predictions, feature_vectors = [], []
+
+    with torch.no_grad():
+        for data, target in data_loader:
+            # Move data to the specified device
+            data, target = data.to(device), target.to(device)
+
+            # Get model output
+            output = model(data)
+
+            # Extract predictions
+            pred = output.argmax(dim=1)
+            predictions.extend(pred.cpu().numpy())
+
+            # Extract and process feature maps
+            feature_maps = output.cpu().numpy()  # Assuming the output is the feature map
+            feature_vector = feature_maps.reshape(feature_maps.shape[0], -1)  # Flatten
+            feature_vectors.append(feature_vector)
+
+            if device == "cuda":
+                torch.cuda.empty_cache()
+
+    return predictions, feature_vectors
 
 def monte_carlo_predictions(model, val_loader: torch.utils.data.DataLoader):
     """
