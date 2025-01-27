@@ -166,13 +166,19 @@ def model_validate(model, data_loader: torch.utils.data.DataLoader):
     preds, targets = [], []
     with torch.no_grad():
         for data, target in data_loader:
-            data = data.to(model.device)
+            data = data.to("cpu")
             output = model(data)
             pred = output.argmax(dim=1)
             preds.extend(pred.cpu().numpy())
             targets.extend(target.numpy())
+            torch.cuda.empty_cache()
+
     return preds, targets
 
+def model_predictions(model, data_loader: torch.utils.data.DataLoader):
+    model.eval();
+    preds, _ = model_validate(model, data_loader)
+    return preds
 
 def monte_carlo_predictions(model, val_loader: torch.utils.data.DataLoader):
     """
@@ -188,7 +194,6 @@ def monte_carlo_predictions(model, val_loader: torch.utils.data.DataLoader):
     model.train()
     preds, targets = model_validate(model, val_loader)
     return preds
-    return ValidationMetrics(multilabel_confusion_matrix(targets, preds))
 
 def do_train(name, train_loader, val_loader, config, model, criterion, optimizer, device, wandb_enabled=False):
     if wandb_enabled:
