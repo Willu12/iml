@@ -106,7 +106,7 @@ class ResidualBlock(nn.Module):
             out_channels,
             kernel_size=kernel_size,
             stride=stride[0],
-            padding=kernel_size // 2,
+            padding=1,
             bias=False,
         )
         self.conv2 = nn.Conv2d(
@@ -114,7 +114,7 @@ class ResidualBlock(nn.Module):
             out_channels,
             kernel_size=kernel_size,
             stride=stride[1],
-            padding=kernel_size // 2,
+            padding=1,
             bias=False,
         )
 
@@ -131,9 +131,11 @@ class ResidualBlock(nn.Module):
         if self.downsample is not None:
             residual = self.downsample(residual)
 
-        out = F.relu(self.conv1(x))
+        out = self.conv1(x)
         if self.batch_normalization:
             out = self.bn1(out)
+        out = F.relu(out)
+        
         out = self.conv2(out)
         if self.batch_normalization:
             out = self.bn2(out)
@@ -153,9 +155,15 @@ class OurResNet(nn.Module):
     def __init__(self, residual_connections=True, batch_normalization=True):
         super().__init__()
         self.conv1 = nn.Conv2d(
-            in_channels=1, out_channels=32, kernel_size=3, bias=False
+            in_channels=1, out_channels=16, kernel_size=3, bias=False, padding=1
         )
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
+
+
+        self.conv2 = nn.Conv2d(
+            in_channels=16, out_channels=32, kernel_size=3, bias=False, padding=1
+        )
+        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
 
         downsample = nn.Conv2d(32, 64, kernel_size=1, stride=2, bias=False)
 
@@ -183,19 +191,20 @@ class OurResNet(nn.Module):
             batch_normalization=batch_normalization,
         )
 
-        self.flattened_size = 64 * (94 // 4) * (128 // 4)
+        self.flattened_size = 64 * 16 * 12
 
         self.fc1 = nn.Linear(self.flattened_size, 128)
         self.fc2 = nn.Linear(128, 2)
 
     def forward(self, x):
         x = self.pool1(F.relu(self.conv1(x)))
+        x = self.pool2(F.relu(self.conv2(x)))
         x = F.relu(self.res1(x))
         x = F.relu(self.res2(x))
         x = F.relu(self.res3(x))
 
         x = x.view(-1, self.flattened_size)
-
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
+
         return x
