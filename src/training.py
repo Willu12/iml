@@ -66,6 +66,7 @@ class ValidationMetrics:
         false_rejection (float): False rejection rate.
         accuracy (float): Accuracy of the model.
     """
+
     def __init__(self, confusion_matrix):
         true_neg = confusion_matrix[0, 0, 0]
         false_neg = confusion_matrix[0, 1, 0]
@@ -142,6 +143,92 @@ def validate(model, val_loader: torch.utils.data.DataLoader):
             preds.extend(pred.cpu().numpy())
             targets.extend(target.numpy())
     return ValidationMetrics(multilabel_confusion_matrix(targets, preds))
+
+
+def predict(model, data_loader: torch.utils.data.DataLoader):
+    model.eval()
+    preds, targets = model_validate(model, data_loader)
+    return ValidationMetrics(multilabel_confusion_matrix(targets, preds))
+
+
+def model_validate(model, data_loader: torch.utils.data.DataLoader):
+    """
+    processes validation of given model on a validation dataset and returns predictions and targets.
+
+    Parameters:
+        model (torch.nn.Module): The trained CNN model.
+        val_loader (DataLoader): DataLoader for the validation set.
+
+    Returns:
+        predictions (np.ndarray): Predictions of the model on the validation dataset.
+        targets (np.ndarray): Targets of the model on the validation dataset.
+    """
+    preds, targets = [], []
+    with torch.no_grad():
+        for data, target in data_loader:
+            data = data.to("cpu")
+            output = model(data)
+            pred = output.argmax(dim=1)
+            preds.extend(pred.cpu().numpy())
+            targets.extend(target.numpy())
+            torch.cuda.empty_cache()
+
+    return preds, targets
+
+def process_predictions_and_features(model, data_loader, device="cpu"):
+    """
+    Processes predictions and feature maps of a given model on a dataset.
+
+    Parameters:
+        model (torch.nn.Module): The trained CNN model.
+        data_loader (torch.utils.data.DataLoader): DataLoader for the dataset.
+        device (str): Device to perform computations on (default: "cpu").
+
+    Returns:
+        predictions (np.ndarray): Predictions of the model on the dataset.
+        feature_vectors (np.ndarray): Flattened feature vectors from the model.
+    """
+    model.to(device)
+    model.eval()
+
+    predictions, feature_vectors = [], []
+
+    with torch.no_grad():
+        for data, target in data_loader:
+            # Move data to the specified device
+            data, target = data.to(device), target.to(device)
+
+            # Get model output
+            output = model(data)
+
+            # Extract predictions
+            pred = output.argmax(dim=1)
+            predictions.extend(pred.cpu().numpy())
+
+            # Extract and process feature maps
+            feature_maps = output.cpu().numpy()  # Assuming the output is the feature map
+            feature_vector = feature_maps.reshape(feature_maps.shape[0], -1)  # Flatten
+            feature_vectors.append(feature_vector)
+
+            if device == "cuda":
+                torch.cuda.empty_cache()
+
+    return predictions, feature_vectors
+
+def monte_carlo_predictions(model, val_loader: torch.utils.data.DataLoader):
+    """
+    processes validation for monte carlo predictions on a validation dataset and returns predictions.
+
+    Parameters:
+        model (torch.nn.Module): The trained CNN model.
+        val_loader (DataLoader): DataLoader for the validation set.
+
+    Returns:
+        predictions (np.ndarray): Predictions of the model on the validation dataset.
+    """
+    model.train()
+    preds, targets = model_validate(model, val_loader)
+    return preds
 
 def do_train(name, train_loader, val_loader, config, model, criterion, optimizer, device, wandb_enabled=False):
     if wandb_enabled:
