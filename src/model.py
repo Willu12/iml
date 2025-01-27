@@ -10,7 +10,7 @@ import torch.nn.functional as F
 
 class TutorialCNN(nn.Module):
     """
-    A tutorial CNN model for educational purposes, suitable for general 
+    A tutorial CNN model for educational purposes, suitable for general
     image classification tasks.
 
     Attributes:
@@ -54,9 +54,10 @@ class OriginalSizeCNN(nn.Module):
     """
     CNN for 94x128 grayscale images
     """
-
-    def __init__(self):
+    def __init__(self, initialize=None, activation=F.relu):
         super().__init__()
+        self.activation = activation
+
         self.conv1 = nn.Conv2d(in_channels=1, out_channels=16, kernel_size=3, padding=1)
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
 
@@ -71,6 +72,11 @@ class OriginalSizeCNN(nn.Module):
         self.fc1 = nn.Linear(self.flattened_size, 128)
         self.fc2 = nn.Linear(128, 2)
 
+        if initialize != None:
+            for attr in self.__dict__.values():
+                if type(attr) == nn.Linear or type(attr) == nn.Conv2d:
+                    initialize(attr)
+
     def forward(self, x):
         x = self.pool1(F.relu(self.conv1(x)))
         x = self.pool2(F.relu(self.conv2(x)))
@@ -78,7 +84,7 @@ class OriginalSizeCNN(nn.Module):
 
         x = x.view(-1, self.flattened_size)
 
-        x = F.relu(self.fc1(x))
+        x = self.activation(self.fc1(x))
         x = self.fc2(x)
         return x
 
@@ -158,3 +164,126 @@ class ModelWithLayerOutput(nn.Module):
     def forward(self, x):
         _ = self.original_model(x)
         return self.layer_output[0] if self.layer_output else None
+
+
+# This is generic in the sense, it could be used for downsampling of features.
+# https://www.analyticsvidhya.com/blog/2021/08/all-you-need-to-know-about-skip-connections/
+class ResidualBlock(nn.Module):
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        stride=[1, 1],
+        kernel_size=3,
+        downsample=None,
+        batch_normalization=True,
+        residual_add=True,
+    ):
+        super(ResidualBlock, self).__init__()
+        self.conv1 = nn.Conv2d(
+            in_channels,
+            out_channels,
+            kernel_size=kernel_size,
+            stride=stride[0],
+            padding=1,
+            bias=False,
+        )
+        self.conv2 = nn.Conv2d(
+            out_channels,
+            out_channels,
+            kernel_size=kernel_size,
+            stride=stride[1],
+            padding=1,
+            bias=False,
+        )
+
+        self.batch_normalization = batch_normalization
+        self.residual_add = residual_add
+        if batch_normalization:
+            self.bn1 = nn.BatchNorm2d(out_channels)
+            self.bn2 = nn.BatchNorm2d(out_channels)
+
+        self.downsample = downsample
+
+    def forward(self, x):
+        residual = x
+        if self.downsample is not None:
+            residual = self.downsample(residual)
+
+        out = self.conv1(x)
+        if self.batch_normalization:
+            out = self.bn1(out)
+        out = F.relu(out)
+        
+        out = self.conv2(out)
+        if self.batch_normalization:
+            out = self.bn2(out)
+
+        if self.residual_add:
+            out += residual
+
+        out = F.relu(out)
+        return out
+
+
+class OurResNet(nn.Module):
+    """
+    Residual CNN for 94x128 grayscale images
+    """
+
+    def __init__(self, residual_connections=True, batch_normalization=True):
+        super().__init__()
+        self.conv1 = nn.Conv2d(
+            in_channels=1, out_channels=16, kernel_size=3, bias=False, padding=1
+        )
+        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
+
+
+        self.conv2 = nn.Conv2d(
+            in_channels=16, out_channels=32, kernel_size=3, bias=False, padding=1
+        )
+        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
+
+        downsample = nn.Conv2d(32, 64, kernel_size=1, stride=2, bias=False)
+
+        self.res1 = ResidualBlock(
+            in_channels=32,
+            out_channels=32,
+            kernel_size=3,
+            residual_add=residual_connections,
+            batch_normalization=batch_normalization,
+        )
+        self.res2 = ResidualBlock(
+            in_channels=32,
+            out_channels=32,
+            kernel_size=3,
+            residual_add=residual_connections,
+            batch_normalization=batch_normalization,
+        )
+        self.res3 = ResidualBlock(
+            in_channels=32,
+            out_channels=64,
+            kernel_size=3,
+            stride=[2, 1],
+            downsample=downsample,
+            residual_add=residual_connections,
+            batch_normalization=batch_normalization,
+        )
+
+        self.flattened_size = 64 * 16 * 12
+
+        self.fc1 = nn.Linear(self.flattened_size, 128)
+        self.fc2 = nn.Linear(128, 2)
+
+    def forward(self, x):
+        x = self.pool1(F.relu(self.conv1(x)))
+        x = self.pool2(F.relu(self.conv2(x)))
+        x = F.relu(self.res1(x))
+        x = F.relu(self.res2(x))
+        x = F.relu(self.res3(x))
+
+        x = x.view(-1, self.flattened_size)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+
+        return x
