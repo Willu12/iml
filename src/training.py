@@ -190,11 +190,11 @@ def do_train(name, train_loader, val_loader, config, model, criterion, optimizer
         wandb.finish()
         return run
     
-def do_test(name, test_loader, model_class, run, device, wandb_enabled = False):
+def do_test(name, test_loader, model_class, model_args, run_id, device, wandb_enabled = False):
     if wandb_enabled:
-        wandb.init(name=name, project="iml", resume="must", id=run.id)
+        wandb.init(name=name, project="iml", resume="must", id=run_id)
  
-    model = model_class()
+    model = model_class(**model_args)
     model.device = device
     model.to(device)
 
