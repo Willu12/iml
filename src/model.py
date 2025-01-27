@@ -54,9 +54,10 @@ class OriginalSizeCNN(nn.Module):
     """
     CNN for 94x128 grayscale images
     """
-
-    def __init__(self):
+    def __init__(self, initialize=None, activation=F.relu):
         super().__init__()
+        self.activation = activation
+
         self.conv1 = nn.Conv2d(in_channels=1, out_channels=16, kernel_size=3, padding=1)
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
 
@@ -75,6 +76,11 @@ class OriginalSizeCNN(nn.Module):
         self.fc1 = nn.Linear(self.flattened_size, 128)
         self.fc2 = nn.Linear(128, 2)
 
+        if initialize != None:
+            for attr in self.__dict__.values():
+                if type(attr) == nn.Linear or type(attr) == nn.Conv2d:
+                    initialize(attr)
+
     def forward(self, x):
         x = self.pool1(F.relu(self.conv1(x)))
         x = self.pool2(F.relu(self.conv2(x)))
@@ -82,7 +88,7 @@ class OriginalSizeCNN(nn.Module):
 
         x = x.view(-1, self.flattened_size)
 
-        x = F.relu(self.fc1(x))
+        x = self.activation(self.fc1(x))
         x = self.fc2(x)
         return x
 
